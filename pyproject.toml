@@ -1,19 +1,19 @@
 [project]
-name = "json2lrc"
+name = "whisper-ctranslate2-json2srt"
 version = "0.2.0"
 description = "Convert Whisper JSON to LRC/SRT, preserving segments and splitting only long ones"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-json2lrc = "json2lrc.cli:main"
+json2lrc = "whisper_ctranslate2_json2srt.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/json2lrc"]
+packages = ["src/whisper_ctranslate2_json2srt"]
 
 [dependency-groups]
 dev = [

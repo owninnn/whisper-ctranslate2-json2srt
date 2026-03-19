@@ -1,4 +1,4 @@
-"""Tests for json2lrc converter."""
+"""Tests for whisper-ctranslate2-json2srt converter."""
 
 import json
 import tempfile
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from json2lrc.converter import convert, format_time_lrc, format_time_srt
-from json2lrc.parser import Segment, Word, parse_whisper_json
-from json2lrc.splitter import process_segments
-from json2lrc.arranger import arrange_words
+from whisper_ctranslate2_json2srt.converter import convert, format_time_lrc, format_time_srt
+from whisper_ctranslate2_json2srt.parser import Segment, Word, parse_whisper_json
+from whisper_ctranslate2_json2srt.splitter import process_segments
+from whisper_ctranslate2_json2srt.arranger import arrange_words
 
 
 def create_test_json(segments_data: list[dict]) -> Path:

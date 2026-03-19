@@ -1,4 +1,4 @@
-# json2lrc
+# whisper-ctranslate2-json2srt
 
 Convert Whisper JSON to LRC/SRT with two processing modes.
 

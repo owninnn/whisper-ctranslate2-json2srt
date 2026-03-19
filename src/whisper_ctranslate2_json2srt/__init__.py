@@ -1,4 +1,4 @@
-"""Convert Whisper JSON to LRC/SRT with two modes: splitter and arranger."""
+"""whisper-ctranslate2-json2srt: Convert Whisper JSON to LRC/SRT with two modes: splitter and arranger."""
 
 from .converter import convert, format_time_lrc, format_time_srt
 from .parser import parse_whisper_json, Segment, Word

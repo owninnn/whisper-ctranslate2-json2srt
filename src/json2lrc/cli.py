@@ -18,12 +18,16 @@ def main():
         help="Output format (default: lrc)"
     )
     parser.add_argument(
-        "--max-duration", type=float, default=10.0,
-        help="Max sentence duration in seconds (default: 10)"
+        "--max-duration", type=float, default=3600.0,
+        help="Max sentence duration in seconds (default: 3600, rarely triggers)"
     )
     parser.add_argument(
-        "--max-words", type=int, default=15,
-        help="Max words per sentence (default: 15)"
+        "--max-words", type=int, default=12,
+        help="Max words per sentence (default: 12)"
+    )
+    parser.add_argument(
+        "--max-chars", type=int, default=200,
+        help="Max characters per sentence (default: 200)"
     )
     parser.add_argument(
         "--comma-threshold", type=int, default=12,
@@ -42,6 +46,7 @@ def main():
         output_format=args.format,
         max_duration=args.max_duration,
         max_words=args.max_words,
+        max_chars=args.max_chars,
         comma_threshold=args.comma_threshold
     )
     

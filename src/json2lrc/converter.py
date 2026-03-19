@@ -25,8 +25,9 @@ def format_time_srt(seconds: float) -> str:
 
 def convert(json_path: Path, output_path: Path | None = None,
             output_format: str = "lrc",
-            max_duration: float = 10.0,
-            max_words: int = 15,
+            max_duration: float = 3600.0,
+            max_words: int = 12,
+            max_chars: int = 200,
             comma_threshold: int = 12) -> Path:
     """Convert Whisper JSON to LRC or SRT, splitting only long segments.
     
@@ -34,8 +35,9 @@ def convert(json_path: Path, output_path: Path | None = None,
         json_path: Path to Whisper JSON file
         output_path: Output path (default: same name with appropriate suffix)
         output_format: Output format ("lrc" or "srt")
-        max_duration: Max duration in seconds (only split if exceeded)
-        max_words: Max words per segment (only split if exceeded)
+        max_duration: Max duration in seconds (default 3600, rarely triggers)
+        max_words: Max words per segment (default 12)
+        max_chars: Max characters per segment (default 200)
         comma_threshold: Words before splitting at comma
         
     Returns:
@@ -52,6 +54,7 @@ def convert(json_path: Path, output_path: Path | None = None,
         segments,
         max_duration=max_duration,
         max_words=max_words,
+        max_chars=max_chars,
         comma_threshold=comma_threshold
     )
     

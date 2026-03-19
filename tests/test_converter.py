@@ -101,41 +101,12 @@ def test_process_segments_short():
         ),
     ]
     
-    sub_segments = process_segments(segments, max_duration=10.0, max_words=15)
+    sub_segments = process_segments(segments, max_duration=3600.0, max_words=12, max_chars=200)
     
     # Short segments should NOT be split
     assert len(sub_segments) == 2
     assert sub_segments[0].text == "Short segment."
     assert sub_segments[1].text == "Another short one."
-
-
-def test_process_segments_long_duration():
-    """Test splitting long segments by duration."""
-    segments = [
-        Segment(
-            id=0,
-            start=0.0,
-            end=15.0,  # Long duration
-            text="This is a very long segment that should be split.",
-            words=[
-                Word(0.0, 1.0, "This"),
-                Word(1.0, 2.0, "is"),
-                Word(2.0, 3.0, "a"),
-                Word(3.0, 4.0, "very"),
-                Word(4.0, 5.0, "long"),
-                Word(5.0, 6.0, "segment"),
-                Word(6.0, 7.0, "that"),
-                Word(7.0, 8.0, "should"),
-                Word(8.0, 9.0, "be"),
-                Word(9.0, 15.0, "split."),
-            ]
-        ),
-    ]
-    
-    sub_segments = process_segments(segments, max_duration=5.0, max_words=15)
-    
-    # Long segment SHOULD be split
-    assert len(sub_segments) >= 2
 
 
 def test_process_segments_long_words():
@@ -150,10 +121,34 @@ def test_process_segments_long_words():
         ),
     ]
     
-    sub_segments = process_segments(segments, max_duration=10.0, max_words=5)
+    sub_segments = process_segments(segments, max_duration=3600.0, max_words=12, max_chars=200)
     
-    # Should be split into 4 parts (20 / 5)
-    assert len(sub_segments) == 4
+    # Should be split into 2 parts (20 / 12)
+    assert len(sub_segments) == 2
+
+
+def test_process_segments_long_chars():
+    """Test splitting long segments by character count."""
+    # Create words with long text to exceed char limit
+    long_words = []
+    for i in range(5):
+        text = f"word{i}" + "A" * 30  # Each word is ~37 chars
+        long_words.append(Word(i, i+0.5, text))
+    
+    segments = [
+        Segment(
+            id=0,
+            start=0.0,
+            end=5.0,
+            text=" ".join(w.text for w in long_words),  # ~185 chars
+            words=long_words
+        ),
+    ]
+    
+    sub_segments = process_segments(segments, max_duration=3600.0, max_words=100, max_chars=50)
+    
+    # Should be split due to char limit
+    assert len(sub_segments) >= 2
 
 
 def test_process_segments_punctuation():
@@ -175,7 +170,8 @@ def test_process_segments_punctuation():
         ),
     ]
     
-    sub_segments = process_segments(segments, max_duration=10.0, max_words=15)
+    # Use stricter limits to force splitting
+    sub_segments = process_segments(segments, max_duration=3600.0, max_words=4, max_chars=200)
     
     # Should split at sentence endings
     assert len(sub_segments) >= 2

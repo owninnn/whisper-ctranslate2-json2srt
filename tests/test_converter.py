@@ -7,19 +7,15 @@ from pathlib import Path
 import pytest
 
 from json2lrc.converter import convert, format_time_lrc, format_time_srt
-from json2lrc.parser import Word, parse_whisper_json
-from json2lrc.segmenter import Sentence, segment_words
+from json2lrc.parser import Segment, Word, parse_whisper_json
+from json2lrc.segmenter import process_segments, SubSegment
 
 
-def create_test_json(words_data: list[dict]) -> Path:
-    """Create a test JSON file."""
+def create_test_json(segments_data: list[dict]) -> Path:
+    """Create a test JSON file with segment structure."""
     data = {
-        "text": " ".join(w["word"] for w in words_data),
-        "segments": [
-            {
-                "words": words_data
-            }
-        ]
+        "text": " ".join(seg["text"] for seg in segments_data),
+        "segments": segments_data
     }
     
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -42,102 +38,177 @@ def test_format_time_srt():
 
 
 def test_parse_whisper_json():
-    """Test JSON parsing."""
-    words_data = [
-        {"start": 0.0, "end": 0.5, "word": " Hello"},
-        {"start": 0.5, "end": 1.0, "word": " world"},
+    """Test JSON parsing preserving segments."""
+    segments_data = [
+        {
+            "id": 0,
+            "start": 0.0,
+            "end": 2.0,
+            "text": " Hello world.",
+            "words": [
+                {"start": 0.0, "end": 0.5, "word": " Hello"},
+                {"start": 0.5, "end": 2.0, "word": " world."},
+            ]
+        },
+        {
+            "id": 1,
+            "start": 2.5,
+            "end": 5.0,
+            "text": " This is test.",
+            "words": [
+                {"start": 2.5, "end": 3.0, "word": " This"},
+                {"start": 3.0, "end": 3.5, "word": " is"},
+                {"start": 3.5, "end": 5.0, "word": " test."},
+            ]
+        }
     ]
     
-    json_path = create_test_json(words_data)
-    words = parse_whisper_json(json_path)
+    json_path = create_test_json(segments_data)
+    segments = parse_whisper_json(json_path)
     
-    assert len(words) == 2
-    assert words[0].text == "Hello"
-    assert words[0].start == 0.0
-    assert words[1].text == "world"
+    assert len(segments) == 2
+    assert segments[0].id == 0
+    assert segments[0].text == "Hello world."
+    assert len(segments[0].words) == 2
+    assert segments[0].words[0].text == "Hello"
     
     json_path.unlink()
 
 
-def test_segment_words_basic():
-    """Test basic word segmentation."""
-    words = [
-        Word(0.0, 0.5, "Hello"),
-        Word(0.5, 1.0, "world."),
-        Word(1.5, 2.0, "This"),
-        Word(2.0, 2.5, "is"),
-        Word(2.5, 3.0, "test."),
+def test_process_segments_short():
+    """Test that short segments are preserved (not split)."""
+    segments = [
+        Segment(
+            id=0,
+            start=0.0,
+            end=3.0,
+            text="Short segment.",
+            words=[
+                Word(0.0, 1.0, "Short"),
+                Word(1.0, 2.0, "segment."),
+            ]
+        ),
+        Segment(
+            id=1,
+            start=3.5,
+            end=6.0,
+            text="Another short one.",
+            words=[
+                Word(3.5, 4.0, "Another"),
+                Word(4.0, 4.5, "short"),
+                Word(4.5, 6.0, "one."),
+            ]
+        ),
     ]
     
-    sentences = segment_words(words)
+    sub_segments = process_segments(segments, max_duration=10.0, max_words=15)
     
-    assert len(sentences) == 2
-    assert sentences[0].text == "Hello world."
-    assert sentences[1].text == "This is test."
+    # Short segments should NOT be split
+    assert len(sub_segments) == 2
+    assert sub_segments[0].text == "Short segment."
+    assert sub_segments[1].text == "Another short one."
 
 
-def test_segment_words_max_duration():
-    """Test segmentation with max duration."""
-    words = [
-        Word(0.0, 1.0, "Word1"),
-        Word(1.0, 2.0, "Word2"),
-        Word(2.0, 12.0, "Word3"),  # This exceeds max_duration
+def test_process_segments_long_duration():
+    """Test splitting long segments by duration."""
+    segments = [
+        Segment(
+            id=0,
+            start=0.0,
+            end=15.0,  # Long duration
+            text="This is a very long segment that should be split.",
+            words=[
+                Word(0.0, 1.0, "This"),
+                Word(1.0, 2.0, "is"),
+                Word(2.0, 3.0, "a"),
+                Word(3.0, 4.0, "very"),
+                Word(4.0, 5.0, "long"),
+                Word(5.0, 6.0, "segment"),
+                Word(6.0, 7.0, "that"),
+                Word(7.0, 8.0, "should"),
+                Word(8.0, 9.0, "be"),
+                Word(9.0, 15.0, "split."),
+            ]
+        ),
     ]
     
-    sentences = segment_words(words, max_duration=5.0)
+    sub_segments = process_segments(segments, max_duration=5.0, max_words=15)
     
-    assert len(sentences) >= 2  # Should split due to duration
+    # Long segment SHOULD be split
+    assert len(sub_segments) >= 2
 
 
-def test_segment_words_max_words():
-    """Test segmentation with max words."""
-    words = [Word(i, i+1, f"Word{i}") for i in range(20)]
-    
-    sentences = segment_words(words, max_words=5)
-    
-    assert len(sentences) == 4  # 20 words / 5 per sentence
-
-
-def test_segment_words_comma():
-    """Test segmentation at comma."""
-    words = [
-        Word(0.0, 0.5, "This"),
-        Word(0.5, 1.0, "is"),
-        Word(1.0, 1.5, "a"),
-        Word(1.5, 2.0, "long"),
-        Word(2.0, 2.5, "sentence,"),
-        Word(2.5, 3.0, "continued."),
+def test_process_segments_long_words():
+    """Test splitting long segments by word count."""
+    segments = [
+        Segment(
+            id=0,
+            start=0.0,
+            end=5.0,
+            text="Many words here that exceed limit.",
+            words=[Word(i, i+0.5, f"word{i}") for i in range(20)]  # 20 words
+        ),
     ]
     
-    sentences = segment_words(words, comma_threshold=5)
+    sub_segments = process_segments(segments, max_duration=10.0, max_words=5)
     
-    # Should break at comma since we have 5 words before it
-    assert len(sentences) == 2
+    # Should be split into 4 parts (20 / 5)
+    assert len(sub_segments) == 4
 
 
-def test_convert():
-    """Test full conversion."""
-    words_data = [
-        {"start": 0.0, "end": 0.5, "word": " Hello"},
-        {"start": 0.5, "end": 1.0, "word": " world."},
-        {"start": 1.5, "end": 2.0, "word": " This"},
-        {"start": 2.0, "end": 2.5, "word": " is"},
-        {"start": 2.5, "end": 3.0, "word": " test."},
+def test_process_segments_punctuation():
+    """Test splitting at punctuation."""
+    segments = [
+        Segment(
+            id=0,
+            start=0.0,
+            end=12.0,  # Long duration
+            text="First sentence. Second sentence. Third one.",
+            words=[
+                Word(0.0, 1.0, "First"),
+                Word(1.0, 2.0, "sentence."),
+                Word(2.5, 3.0, "Second"),
+                Word(3.0, 4.0, "sentence."),
+                Word(5.0, 6.0, "Third"),
+                Word(6.0, 12.0, "one."),
+            ]
+        ),
     ]
     
-    json_path = create_test_json(words_data)
+    sub_segments = process_segments(segments, max_duration=10.0, max_words=15)
+    
+    # Should split at sentence endings
+    assert len(sub_segments) >= 2
+    assert "First sentence." in [s.text for s in sub_segments]
+
+
+def test_convert_to_lrc():
+    """Test full conversion to LRC."""
+    segments_data = [
+        {
+            "id": 0,
+            "start": 0.0,
+            "end": 2.0,
+            "text": " Hello world.",
+            "words": [
+                {"start": 0.0, "end": 0.5, "word": " Hello"},
+                {"start": 0.5, "end": 2.0, "word": " world."},
+            ]
+        },
+    ]
+    
+    json_path = create_test_json(segments_data)
     
     with tempfile.NamedTemporaryFile(suffix=".lrc", delete=False) as f:
         lrc_path = Path(f.name)
     
-    result = convert(json_path, lrc_path)
+    result = convert(json_path, lrc_path, output_format="lrc")
     
     assert result == lrc_path
     assert lrc_path.exists()
     
     content = lrc_path.read_text()
     assert "[00:00.00]Hello world." in content
-    assert "[00:01.50]This is test." in content
     
     json_path.unlink()
     lrc_path.unlink()
@@ -145,15 +216,20 @@ def test_convert():
 
 def test_convert_to_srt():
     """Test conversion to SRT format."""
-    words_data = [
-        {"start": 0.0, "end": 0.5, "word": " Hello"},
-        {"start": 0.5, "end": 1.0, "word": " world."},
-        {"start": 1.5, "end": 2.0, "word": " This"},
-        {"start": 2.0, "end": 2.5, "word": " is"},
-        {"start": 2.5, "end": 3.0, "word": " test."},
+    segments_data = [
+        {
+            "id": 0,
+            "start": 0.0,
+            "end": 2.0,
+            "text": " Hello world.",
+            "words": [
+                {"start": 0.0, "end": 0.5, "word": " Hello"},
+                {"start": 0.5, "end": 2.0, "word": " world."},
+            ]
+        },
     ]
     
-    json_path = create_test_json(words_data)
+    json_path = create_test_json(segments_data)
     
     with tempfile.NamedTemporaryFile(suffix=".srt", delete=False) as f:
         srt_path = Path(f.name)
@@ -164,15 +240,7 @@ def test_convert_to_srt():
     assert srt_path.exists()
     
     content = srt_path.read_text()
-    assert "1\n00:00:00,000 --> 00:00:01,000\nHello world." in content
-    assert "2\n00:00:01,500 --> 00:00:03,000\nThis is test." in content
+    assert "1\n00:00:00,000 --> 00:00:02,000\nHello world." in content
     
     json_path.unlink()
     srt_path.unlink()
-
-
-def test_compare_with_srt():
-    """Compare output with original SRT timing."""
-    # This test would need actual Whisper output files
-    # For now, just verify the structure
-    pass

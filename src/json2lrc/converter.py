@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from .parser import parse_whisper_json
-from .segmenter import segment_words
+from .segmenter import process_segments
 
 
 def format_time_lrc(seconds: float) -> str:
@@ -28,15 +28,15 @@ def convert(json_path: Path, output_path: Path | None = None,
             max_duration: float = 10.0,
             max_words: int = 15,
             comma_threshold: int = 12) -> Path:
-    """Convert Whisper JSON to LRC or SRT.
+    """Convert Whisper JSON to LRC or SRT, splitting only long segments.
     
     Args:
         json_path: Path to Whisper JSON file
         output_path: Output path (default: same name with appropriate suffix)
         output_format: Output format ("lrc" or "srt")
-        max_duration: Max sentence duration
-        max_words: Max words per sentence
-        comma_threshold: Words before breaking at comma
+        max_duration: Max duration in seconds (only split if exceeded)
+        max_words: Max words per segment (only split if exceeded)
+        comma_threshold: Words before splitting at comma
         
     Returns:
         Path to output file
@@ -44,12 +44,12 @@ def convert(json_path: Path, output_path: Path | None = None,
     if output_path is None:
         output_path = json_path.with_suffix(f".{output_format}")
     
-    # Parse JSON
-    words = parse_whisper_json(json_path)
+    # Parse JSON (preserving segment structure)
+    segments = parse_whisper_json(json_path)
     
-    # Segment into sentences
-    sentences = segment_words(
-        words,
+    # Process segments (split only long ones)
+    sub_segments = process_segments(
+        segments,
         max_duration=max_duration,
         max_words=max_words,
         comma_threshold=comma_threshold
@@ -58,15 +58,13 @@ def convert(json_path: Path, output_path: Path | None = None,
     # Write output
     with open(output_path, "w", encoding="utf-8") as f:
         if output_format == "lrc":
-            for sentence in sentences:
-                time_tag = format_time_lrc(sentence.start)
-                text = sentence.text
-                f.write(f"{time_tag}{text}\n")
+            for sub_seg in sub_segments:
+                time_tag = format_time_lrc(sub_seg.start)
+                f.write(f"{time_tag}{sub_seg.text}\n")
         else:  # srt
-            for i, sentence in enumerate(sentences, 1):
-                start_time = format_time_srt(sentence.start)
-                end_time = format_time_srt(sentence.end)
-                text = sentence.text
-                f.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
+            for i, sub_seg in enumerate(sub_segments, 1):
+                start_time = format_time_srt(sub_seg.start)
+                end_time = format_time_srt(sub_seg.end)
+                f.write(f"{i}\n{start_time} --> {end_time}\n{sub_seg.text}\n\n")
     
     return output_path

@@ -53,6 +53,22 @@ def should_split_at_word(word: Word, current_word_count: int,
     return False
 
 
+def is_repetitive_filler(words: list[Word]) -> bool:
+    """Check if words are repetitive fillers (e.g., 'that that that')."""
+    if len(words) < 3:
+        return False
+    
+    texts = [w.text.strip().lower() for w in words]
+    # Check if all words are the same filler word
+    fillers = {'that', 'the', 'a', 'um', 'uh', 'er'}
+    unique_words = set(texts)
+    
+    if len(unique_words) == 1 and list(unique_words)[0] in fillers:
+        return True
+    
+    return False
+
+
 def split_long_segment(segment: Segment,
                        max_duration: float = 10.0,
                        max_words: int = 15,
@@ -70,6 +86,15 @@ def split_long_segment(segment: Segment,
     Returns:
         List of sub-segments (or single item if no splitting needed)
     """
+    # Special case: repetitive fillers - keep as-is but log
+    if is_repetitive_filler(segment.words):
+        return [SubSegment(
+            start=segment.start,
+            end=segment.end,
+            text=segment.text,
+            words=segment.words
+        )]
+    
     # Check if splitting is needed
     if segment.duration <= max_duration and segment.word_count <= max_words:
         # Return as-is, no splitting needed

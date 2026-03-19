@@ -9,10 +9,14 @@ from .converter import convert
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert Whisper JSON to LRC with intelligent segmentation"
+        description="Convert Whisper JSON to LRC/SRT with intelligent segmentation"
     )
     parser.add_argument("json_file", type=Path, help="Whisper JSON file")
-    parser.add_argument("-o", "--output", type=Path, help="Output LRC file")
+    parser.add_argument("-o", "--output", type=Path, help="Output file")
+    parser.add_argument(
+        "-f", "--format", choices=["lrc", "srt"], default="lrc",
+        help="Output format (default: lrc)"
+    )
     parser.add_argument(
         "--max-duration", type=float, default=10.0,
         help="Max sentence duration in seconds (default: 10)"
@@ -35,6 +39,7 @@ def main():
     output = convert(
         args.json_file,
         args.output,
+        output_format=args.format,
         max_duration=args.max_duration,
         max_words=args.max_words,
         comma_threshold=args.comma_threshold

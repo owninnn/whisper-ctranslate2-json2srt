@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from json2lrc.converter import convert, format_time
+from json2lrc.converter import convert, format_time_lrc, format_time_srt
 from json2lrc.parser import Word, parse_whisper_json
 from json2lrc.segmenter import Sentence, segment_words
 
@@ -27,11 +27,18 @@ def create_test_json(words_data: list[dict]) -> Path:
         return Path(f.name)
 
 
-def test_format_time():
-    """Test time formatting."""
-    assert format_time(0) == "[00:00.00]"
-    assert format_time(61.5) == "[01:01.50]"
-    assert format_time(123.456) == "[02:03.45]"
+def test_format_time_lrc():
+    """Test LRC time formatting."""
+    assert format_time_lrc(0) == "[00:00.00]"
+    assert format_time_lrc(61.5) == "[01:01.50]"
+    assert format_time_lrc(123.456) == "[02:03.45]"
+
+
+def test_format_time_srt():
+    """Test SRT time formatting."""
+    assert format_time_srt(0) == "00:00:00,000"
+    assert format_time_srt(61.5) == "00:01:01,500"
+    assert format_time_srt(3661.123) == "01:01:01,123"
 
 
 def test_parse_whisper_json():
@@ -136,8 +143,36 @@ def test_convert():
     lrc_path.unlink()
 
 
+def test_convert_to_srt():
+    """Test conversion to SRT format."""
+    words_data = [
+        {"start": 0.0, "end": 0.5, "word": " Hello"},
+        {"start": 0.5, "end": 1.0, "word": " world."},
+        {"start": 1.5, "end": 2.0, "word": " This"},
+        {"start": 2.0, "end": 2.5, "word": " is"},
+        {"start": 2.5, "end": 3.0, "word": " test."},
+    ]
+    
+    json_path = create_test_json(words_data)
+    
+    with tempfile.NamedTemporaryFile(suffix=".srt", delete=False) as f:
+        srt_path = Path(f.name)
+    
+    result = convert(json_path, srt_path, output_format="srt")
+    
+    assert result == srt_path
+    assert srt_path.exists()
+    
+    content = srt_path.read_text()
+    assert "1\n00:00:00,000 --> 00:00:01,000\nHello world." in content
+    assert "2\n00:00:01,500 --> 00:00:03,000\nThis is test." in content
+    
+    json_path.unlink()
+    srt_path.unlink()
+
+
 def test_compare_with_srt():
-    """Compare LRC output with original SRT timing."""
+    """Compare output with original SRT timing."""
     # This test would need actual Whisper output files
     # For now, just verify the structure
     pass

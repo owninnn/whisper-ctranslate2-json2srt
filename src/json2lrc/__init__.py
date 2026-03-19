@@ -1,17 +1,18 @@
-"""Convert Whisper JSON to LRC/SRT, preserving segments and splitting only long ones."""
+"""Convert Whisper JSON to LRC/SRT with two modes: splitter and arranger."""
 
 from .converter import convert, format_time_lrc, format_time_srt
 from .parser import parse_whisper_json, Segment, Word
-from .segmenter import process_segments, SubSegment
+from .splitter import process_segments
+from .arranger import arrange_words
 
 __all__ = [
     "convert",
     "parse_whisper_json",
     "process_segments",
+    "arrange_words",
     "format_time_lrc",
     "format_time_srt",
     "Segment",
-    "SubSegment",
     "Word",
 ]
-__version__ = "0.2.0"
+__version__ = "0.3.0"

@@ -1,15 +1,18 @@
 # json2lrc
 
-Convert Whisper JSON to LRC with intelligent sentence segmentation.
+Convert Whisper JSON to LRC/SRT with two processing modes.
 
 ## Features
 
-- Parse Whisper JSON output with word-level timestamps
+- **Two Processing Modes:**
+  - **Splitter** (default): Preserve Whisper segments, split only long ones
+  - **Arranger**: Ignore segments, arrange words purely by word info
 - Intelligent sentence segmentation based on:
   - Punctuation (periods, question marks, exclamation marks)
   - Comma threshold (break long sentences at commas)
-  - Duration limit (max 10 seconds per sentence)
-  - Word count limit (max 15 words per sentence)
+  - Duration limit (default 3600s, rarely triggers)
+  - Word count limit (default 12)
+  - Character count limit (default 200)
 - Clean, modern Python 3.11+ code
 - Zero external dependencies
 
@@ -21,16 +24,42 @@ uv pip install -e .
 
 ## Usage
 
+### Splitter Mode (Default)
+
+Preserve Whisper's segment structure, only split segments that exceed limits:
+
 ```bash
-# Basic usage
-json2lrc whisper_output.json
-
-# With custom parameters
-json2lrc whisper_output.json -o output.lrc --max-duration 8 --max-words 12
-
-# Using uvx
-uvx --from json2lrc json2lrc whisper_output.json
+json2lrc input.json
+json2lrc input.json -m splitter
 ```
+
+### Arranger Mode
+
+Ignore Whisper's segments, flatten all words and rearrange:
+
+```bash
+json2lrc input.json -m arranger
+```
+
+### Output Format
+
+```bash
+# LRC format (default)
+json2lrc input.json
+
+# SRT format
+json2lrc input.json -f srt
+
+# Custom parameters
+json2lrc input.json -m arranger -f srt --max-words 10 --max-chars 150
+```
+
+## Modes Comparison
+
+| Mode | Use Case | Behavior |
+|------|----------|----------|
+| **Splitter** | Trust Whisper's segmentation | Preserve segments, split only if >12 words or >200 chars |
+| **Arranger** | Want pure word-based segmentation | Flatten all words, create new segments based on limits |
 
 ## Testing
 
@@ -40,15 +69,29 @@ uv run pytest tests/ -v
 
 ## Output Format
 
-LRC format with intelligent line breaks:
-
+### LRC
 ```
 [00:00.00]Hello world.
 [00:01.50]This is a test.
-[00:03.00]Another sentence here.
 ```
 
-## Comparison with SRT
+### SRT
+```
+1
+00:00:00,000 --> 00:00:02,000
+Hello world.
 
-The tool generates LRC that matches the timing of Whisper's SRT output,
-but with better sentence boundaries for karaoke-style display.
+2
+00:00:01,500 --> 00:00:03,000
+This is a test.
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--max-duration` | 3600 | Max duration in seconds (rarely triggers) |
+| `--max-words` | 12 | Max words per segment |
+| `--max-chars` | 200 | Max characters per segment |
+| `--mode` | splitter | Processing mode: splitter or arranger |
+| `--format` | lrc | Output format: lrc or srt |

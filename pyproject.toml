@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-json2lrc = "whisper_ctranslate2_json2srt.cli:main"
+whisper-ctranslate2-json2srt = "whisper_ctranslate2_json2srt.cli:main"
 
 [build-system]
 requires = ["hatchling"]

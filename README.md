@@ -29,8 +29,8 @@ uv pip install -e .
 Preserve Whisper's segment structure, only split segments that exceed limits:
 
 ```bash
-json2lrc input.json
-json2lrc input.json -m splitter
+whisper-ctranslate2-json2srt input.json
+whisper-ctranslate2-json2srt input.json -m splitter
 ```
 
 ### Arranger Mode
@@ -38,20 +38,20 @@ json2lrc input.json -m splitter
 Ignore Whisper's segments, flatten all words and rearrange:
 
 ```bash
-json2lrc input.json -m arranger
+whisper-ctranslate2-json2srt input.json -m arranger
 ```
 
 ### Output Format
 
 ```bash
 # LRC format (default)
-json2lrc input.json
+whisper-ctranslate2-json2srt input.json
 
 # SRT format
-json2lrc input.json -f srt
+whisper-ctranslate2-json2srt input.json -f srt
 
 # Custom parameters
-json2lrc input.json -m arranger -f srt --max-words 10 --max-chars 150
+whisper-ctranslate2-json2srt input.json -m arranger -f srt --max-words 10 --max-chars 150
 ```
 
 ## Modes Comparison

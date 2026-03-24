@@ -3,8 +3,8 @@
 import re
 from pathlib import Path
 
-# Import from the main parser module to ensure compatibility
-from ..parser import Word, Segment
+# Import from whisper_json_parser to ensure compatibility
+from .whisper_json_parser import Word, Segment
 
 
 def parse_time(time_str: str) -> float:

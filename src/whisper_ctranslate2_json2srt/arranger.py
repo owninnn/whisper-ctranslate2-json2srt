@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from .parser import Word
+from .parsers.whisper_json_parser import Word
 
 
 @dataclass

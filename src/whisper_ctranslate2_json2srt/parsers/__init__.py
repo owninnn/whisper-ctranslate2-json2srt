@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from .whisper_json_parser import Segment, parse_whisper_json
+from ..model import Segment
+from .whisper_json_parser import parse_whisper_json
 from .vtt_parser import parse_vtt
 
 

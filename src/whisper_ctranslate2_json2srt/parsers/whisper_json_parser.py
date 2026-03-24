@@ -1,38 +1,9 @@
 """Parse Whisper JSON output."""
 
 import json
-from dataclasses import dataclass, field
 from pathlib import Path
 
-
-@dataclass
-class Word:
-    """A single word with timing."""
-    start: float  # seconds
-    end: float    # seconds
-    text: str
-    
-    @property
-    def duration(self) -> float:
-        return self.end - self.start
-
-
-@dataclass
-class Segment:
-    """A Whisper segment (preserving original segmentation)."""
-    id: int
-    start: float
-    end: float
-    text: str
-    words: list[Word] = field(default_factory=list)
-    
-    @property
-    def duration(self) -> float:
-        return self.end - self.start
-    
-    @property
-    def word_count(self) -> int:
-        return len(self.words)
+from ..model import Segment, Word
 
 
 def parse_whisper_json(json_path: Path) -> list[Segment]:

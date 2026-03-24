@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from .parsers.whisper_json_parser import Segment, Word
+from .model import Segment, Word
 
 
 @dataclass

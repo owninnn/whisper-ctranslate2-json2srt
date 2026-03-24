@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from whisper_ctranslate2_json2srt.converter import convert, format_time_lrc, format_time_srt
-from whisper_ctranslate2_json2srt.parsers.whisper_json_parser import Segment, Word, parse_whisper_json
+from whisper_ctranslate2_json2srt.model import Segment, Word
+from whisper_ctranslate2_json2srt.parsers.whisper_json_parser import parse_whisper_json
 from whisper_ctranslate2_json2srt.splitter import process_segments
 from whisper_ctranslate2_json2srt.arranger import arrange_words
 from whisper_ctranslate2_json2srt.parsers.vtt_parser import parse_vtt, parse_youtube_vtt, parse_standard_vtt, parse_time

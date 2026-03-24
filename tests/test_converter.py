@@ -10,6 +10,7 @@ from whisper_ctranslate2_json2srt.converter import convert, format_time_lrc, for
 from whisper_ctranslate2_json2srt.parser import Segment, Word, parse_whisper_json
 from whisper_ctranslate2_json2srt.splitter import process_segments
 from whisper_ctranslate2_json2srt.arranger import arrange_words
+from whisper_ctranslate2_json2srt.parsers.vtt_parser import parse_vtt, parse_youtube_vtt, parse_standard_vtt, parse_time
 
 
 def create_test_json(segments_data: list[dict]) -> Path:
@@ -243,3 +244,257 @@ def test_convert_to_srt():
     
     json_path.unlink()
     srt_path.unlink()
+
+
+# ===== VTT Parser Tests =====
+
+def test_parse_time():
+    """Test time parsing from VTT format."""
+    assert parse_time("00:00:00.000") == 0.0
+    assert parse_time("00:01:30.500") == 90.5
+    assert parse_time("01:30:45.250") == 5445.25
+    assert parse_time("30.500") == 30.5
+    assert parse_time("00:30.500") == 30.5
+
+
+def test_parse_standard_vtt_basic():
+    """Test parsing standard WebVTT file."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+Hello world
+
+00:00:04.000 --> 00:00:06.000
+Second line
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 2
+        assert segments[0].text == "Hello world"
+        assert segments[0].start == 1.0
+        assert segments[0].end == 3.0
+        assert segments[1].text == "Second line"
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_standard_vtt_multiline():
+    """Test parsing standard VTT with multiline text."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:04.000
+Line 1
+Line 2 continues
+
+00:00:05.000 --> 00:00:07.000
+Single line
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 2
+        assert "Line 1 Line 2 continues" in segments[0].text
+        assert segments[0].start == 1.0
+        assert segments[0].end == 4.0
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_standard_vtt_with_cue_settings():
+    """Test parsing VTT with cue settings (position, alignment)."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000 position:50% align:middle
+Hello with settings
+
+00:00:04.000 --> 00:00:06.000 line:0 position:100%
+Top right text
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 2
+        assert segments[0].text == "Hello with settings"
+        assert segments[1].text == "Top right text"
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_standard_vtt_empty_cues():
+    """Test parsing VTT with empty cues."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:02.000
+
+00:00:03.000 --> 00:00:04.000
+Valid text
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        # Empty cues are skipped, only valid text is parsed
+        assert len(segments) >= 1
+        assert "Valid text" in segments[-1].text
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_standard_vtt_unicode():
+    """Test parsing VTT with unicode content."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+你好世界 🌍 مرحبا
+
+00:00:04.000 --> 00:00:06.000
+Привет мир
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 2
+        assert "你好世界" in segments[0].text
+        assert "Привет" in segments[1].text
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_youtube_vtt_basic():
+    """Test parsing YouTube VTT with word-level timestamps."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+Hello<00:00:01.500><c> world</c>
+
+00:00:04.000 --> 00:00:06.000
+Second<00:00:04.500><c> sentence.</c>
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_youtube_vtt(vtt_path)
+        assert len(segments) >= 1
+        # Should extract words with timestamps
+        total_words = sum(len(seg.words) for seg in segments)
+        assert total_words >= 2
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_youtube_vtt_overlapping_cues():
+    """Test parsing YouTube VTT with overlapping karaoke-style cues."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:04.000
+Hello<00:00:02.000><c> world</c>
+
+00:00:02.000 --> 00:00:05.000
+Hello world<00:00:03.000><c> again.</c>
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_youtube_vtt(vtt_path)
+        # Should deduplicate words from overlapping cues
+        assert len(segments) >= 1
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_vtt_auto_detect_standard():
+    """Test auto-detection of standard VTT format."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+Standard VTT without word timestamps
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_vtt(vtt_path)
+        assert len(segments) == 1
+        assert segments[0].text == "Standard VTT without word timestamps"
+        # Standard VTT has one word per segment
+        assert len(segments[0].words) == 1
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_vtt_auto_detect_youtube():
+    """Test auto-detection of YouTube VTT format."""
+    vtt_content = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+Hello<00:00:01.500><c> world</c>
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_vtt(vtt_path)
+        # Should detect as YouTube format and extract words
+        assert len(segments) >= 1
+        total_words = sum(len(seg.words) for seg in segments)
+        assert total_words >= 2
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_vtt_empty_file():
+    """Test parsing empty VTT file."""
+    vtt_content = "WEBVTT\n"
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 0
+    finally:
+        vtt_path.unlink()
+
+
+def test_parse_vtt_hour_timestamps():
+    """Test parsing VTT with hour-level timestamps."""
+    vtt_content = """WEBVTT
+
+01:30:45.500 --> 01:30:50.000
+Over one hour
+
+00:10:00.000 --> 00:10:05.000
+Ten minutes
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".vtt", delete=False, encoding="utf-8") as f:
+        f.write(vtt_content)
+        vtt_path = Path(f.name)
+    
+    try:
+        segments = parse_standard_vtt(vtt_path)
+        assert len(segments) == 2
+        assert segments[0].start == 5445.5  # 1:30:45.500
+        assert segments[1].start == 600.0   # 00:10:00.000
+    finally:
+        vtt_path.unlink()

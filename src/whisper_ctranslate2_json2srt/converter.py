@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .parser import parse_whisper_json
+from .parsers import parse_input
 from .splitter import process_segments as split_segments
 from .arranger import arrange_words
 
@@ -24,35 +24,37 @@ def format_time_srt(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
-def convert(json_path: Path, output_path: Path | None = None,
+def convert(input_path: Path, output_path: Path | None = None,
             output_format: str = "lrc",
             mode: str = "splitter",
             max_duration: float = 3600.0,
             max_words: int = 12,
             max_chars: int = 200,
-            comma_threshold: int = 12) -> Path:
-    """Convert Whisper JSON to LRC or SRT.
+            comma_threshold: int = 12,
+            input_format: str = "auto") -> Path:
+    """Convert Whisper JSON or VTT to LRC or SRT.
     
     Args:
-        json_path: Path to Whisper JSON file
+        input_path: Path to input file (JSON or VTT)
         output_path: Output path (default: same name with appropriate suffix)
         output_format: Output format ("lrc" or "srt")
         mode: Processing mode ("splitter" or "arranger")
-            - splitter: Preserve Whisper segments, split only long ones
+            - splitter: Preserve segments, split only long ones
             - arranger: Ignore segments, arrange words purely by word info
         max_duration: Max duration in seconds
         max_words: Max words per segment
         max_chars: Max characters per segment
         comma_threshold: Words before splitting at comma
+        input_format: Input format ("auto", "json", or "vtt")
         
     Returns:
         Path to output file
     """
     if output_path is None:
-        output_path = json_path.with_suffix(f".{output_format}")
+        output_path = input_path.with_suffix(f".{output_format}")
     
-    # Parse JSON
-    segments = parse_whisper_json(json_path)
+    # Parse input using unified parser
+    segments = parse_input(input_path, input_format)
     
     if mode == "splitter":
         # Splitter mode: Preserve segments, split only long ones

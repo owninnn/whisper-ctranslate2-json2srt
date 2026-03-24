@@ -1,11 +1,15 @@
 # whisper-ctranslate2-json2srt
 
-Convert Whisper JSON to LRC/SRT with two processing modes.
+Convert Whisper JSON or YouTube VTT to LRC/SRT with two processing modes.
 
 ## Features
 
+- **Input Formats:**
+  - Whisper JSON (with word-level timestamps)
+  - YouTube VTT (with word-level timestamps, auto-detected)
+  - Standard WebVTT
 - **Two Processing Modes:**
-  - **Splitter** (default): Preserve Whisper segments, split only long ones
+  - **Splitter** (default): Preserve segments, split only long ones
   - **Arranger**: Ignore segments, arrange words purely by word info
 - Intelligent sentence segmentation based on:
   - Punctuation (periods, question marks, exclamation marks)
@@ -24,18 +28,38 @@ uv pip install -e .
 
 ## Usage
 
-### Splitter Mode (Default)
-
-Preserve Whisper's segment structure, only split segments that exceed limits:
+### Whisper JSON Input
 
 ```bash
+# JSON input (auto-detected)
 whisper-ctranslate2-json2srt input.json
+
+# Explicit JSON input
+whisper-ctranslate2-json2srt input.json --input-format json
+```
+
+### YouTube VTT Input
+
+```bash
+# VTT input (auto-detected by .vtt extension)
+whisper-ctranslate2-json2srt input.vtt
+
+# Explicit VTT input
+whisper-ctranslate2-json2srt input.vtt --input-format vtt
+
+# Recommended: Use arranger mode for YouTube VTT
+whisper-ctranslate2-json2srt input.vtt -m arranger -f srt
+```
+
+### Processing Modes
+
+**Splitter Mode (Default)**: Preserve segment structure, only split segments that exceed limits:
+
+```bash
 whisper-ctranslate2-json2srt input.json -m splitter
 ```
 
-### Arranger Mode
-
-Ignore Whisper's segments, flatten all words and rearrange:
+**Arranger Mode**: Ignore segments, flatten all words and rearrange:
 
 ```bash
 whisper-ctranslate2-json2srt input.json -m arranger
@@ -90,8 +114,19 @@ This is a test.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `--input-format` | auto | Input format: auto, json, or vtt |
 | `--max-duration` | 3600 | Max duration in seconds (rarely triggers) |
 | `--max-words` | 12 | Max words per segment |
 | `--max-chars` | 200 | Max characters per segment |
 | `--mode` | splitter | Processing mode: splitter or arranger |
 | `--format` | lrc | Output format: lrc or srt |
+
+## YouTube VTT Support
+
+YouTube VTT files contain word-level timestamps in a special format with overlapping cues. This tool:
+
+1. Parses the word-level timestamps from `<timestamp><c>word</c>` tags
+2. Removes duplicate words that appear in multiple overlapping cues
+3. Reconstructs clean sentences using the arranger algorithm
+
+**Note**: For YouTube VTT, the `arranger` mode is recommended as it produces cleaner output by ignoring the overlapping cue structure.

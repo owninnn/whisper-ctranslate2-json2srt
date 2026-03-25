@@ -1,4 +1,4 @@
-# whisper-ctranslate2-json2srt
+# word2sent
 
 Convert Whisper JSON or YouTube VTT to LRC/SRT with two processing modes.
 
@@ -32,23 +32,23 @@ uv pip install -e .
 
 ```bash
 # JSON input (auto-detected)
-whisper-ctranslate2-json2srt input.json
+word2sent input.json
 
 # Explicit JSON input
-whisper-ctranslate2-json2srt input.json --input-format json
+word2sent input.json --input-format json
 ```
 
 ### YouTube VTT Input
 
 ```bash
 # VTT input (auto-detected by .vtt extension)
-whisper-ctranslate2-json2srt input.vtt
+word2sent input.vtt
 
 # Explicit VTT input
-whisper-ctranslate2-json2srt input.vtt --input-format vtt
+word2sent input.vtt --input-format vtt
 
 # Recommended: Use arranger mode for YouTube VTT
-whisper-ctranslate2-json2srt input.vtt -m arranger -f srt
+word2sent input.vtt -m arranger -f srt
 ```
 
 ### Processing Modes
@@ -56,26 +56,26 @@ whisper-ctranslate2-json2srt input.vtt -m arranger -f srt
 **Splitter Mode (Default)**: Preserve segment structure, only split segments that exceed limits:
 
 ```bash
-whisper-ctranslate2-json2srt input.json -m splitter
+word2sent input.json -m splitter
 ```
 
 **Arranger Mode**: Ignore segments, flatten all words and rearrange:
 
 ```bash
-whisper-ctranslate2-json2srt input.json -m arranger
+word2sent input.json -m arranger
 ```
 
 ### Output Format
 
 ```bash
 # LRC format (default)
-whisper-ctranslate2-json2srt input.json
+word2sent input.json
 
 # SRT format
-whisper-ctranslate2-json2srt input.json -f srt
+word2sent input.json -f srt
 
 # Custom parameters
-whisper-ctranslate2-json2srt input.json -m arranger -f srt --max-words 10 --max-chars 150
+word2sent input.json -m arranger -f srt --max-words 10 --max-chars 150
 ```
 
 ## Modes Comparison

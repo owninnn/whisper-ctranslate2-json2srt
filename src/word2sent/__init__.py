@@ -1,4 +1,4 @@
-"""whisper-ctranslate2-json2srt: Convert Whisper JSON or YouTube VTT to LRC/SRT with two modes: splitter and arranger."""
+"""word2sent: Convert Whisper JSON or YouTube VTT to LRC/SRT with two modes: splitter and arranger."""
 
 from .converter import convert, format_time_lrc, format_time_srt
 from .model import Segment, Word

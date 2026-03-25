@@ -1,19 +1,19 @@
 [project]
-name = "whisper-ctranslate2-json2srt"
+name = "word2sent"
 version = "0.2.0"
 description = "Convert Whisper JSON to LRC/SRT, preserving segments and splitting only long ones"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-whisper-ctranslate2-json2srt = "whisper_ctranslate2_json2srt.cli:main"
+word2sent = "word2sent.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/whisper_ctranslate2_json2srt"]
+packages = ["src/word2sent"]
 
 [dependency-groups]
 dev = [

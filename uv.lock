@@ -236,7 +236,7 @@ wheels = [
 ]
 
 [[package]]
-name = "whisper-ctranslate2-json2srt"
+name = "word2sent"
 version = "0.2.0"
 source = { editable = "." }
 
